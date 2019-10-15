@@ -2,9 +2,11 @@ package com.mujie.myflink;
 
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.functions.MapFunction;
+import org.apache.flink.api.common.operators.Order;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.operators.*;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.util.Collector;
 
 
@@ -47,11 +49,13 @@ public class MyFisrstCodeFlink {
         pairwords.print();
         UnsortedGrouping<Tuple2<String, Integer>> groupBy = pairwords.groupBy(0);
         System.out.println("========================");
-        AggregateOperator<Tuple2<String, Integer>> result = groupBy.sum(1);
+        AggregateOperator<Tuple2<String, Integer>> result = groupBy.sum(1).setParallelism(1);
 
-        result.writeAsText("./data/result/r1.txt");
-//        result.print();
-        environment.execute("myFlink");
+        result.writeAsText("./data/result/r1.txt", FileSystem.WriteMode.OVERWRITE);
+        // result 进行排序（局部排序——每一个核去排序,因此所有结果只会是局部有序，全局乱序）
+        SortPartitionOperator<Tuple2<String, Integer>> sortResult = result.sortPartition(1, Order.DESCENDING);
+        result.print();
+//        environment.execute("myFlink");
 //        result.collect();
 //        result.count();
     }
